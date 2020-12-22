@@ -214,8 +214,8 @@ namespace WinResize
           verboseOut("  Window rect: " + winRect.format());
 
           var toRect = new Rectangle(
-            winRect.X - procScreen.Bounds.X + toScreen.Bounds.X,
-            winRect.Y - procScreen.Bounds.Y + toScreen.Bounds.Y,
+            toScreen.Bounds.X,
+            toScreen.Bounds.Y,
             winRect.Width,
             winRect.Height);
 
