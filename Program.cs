@@ -98,16 +98,20 @@ namespace WinResize
         .Select(str => str.StartsWith("p") ? Screen.PrimaryScreen : Screen.AllScreens[int.Parse(str) - 1])
         .ToList();
 
+      bool verbose = false;
+
       while (argi < args.Length)
       {
         var option = args[argi++];
-        var param = args[argi++];
+        String param;
         switch (option)
         {
           case "from":
+            param = args[argi++];
             fromScreens = fromScreens.Concat(parseParam(param)).Distinct().ToList<Screen>();
             break;
           case "to":
+            param = args[argi++];
             var thing = parseParam(param);
             if (thing.Count > 1)
             {
@@ -117,11 +121,19 @@ namespace WinResize
             toScreen = parseParam(param).First();
             break;
           case "proc":
+            param = args[argi++];
             nameFilter = nameFilter.Concat(param.Split(",")).Distinct().ToList<String>();
             break;
+          case "verbose":
+            verbose = true;
+            break;
+          default:
+            Console.Error.WriteLine($"Unrecognized token: \"{option}\"");
+            return 3;
         }
       }
 
+      // If no screen specified, move from all
       if (fromScreens.Count == 0)
       {
         fromScreens = new List<Screen>(Screen.AllScreens);
@@ -150,6 +162,12 @@ namespace WinResize
       Console.WriteLine($"Target screen bounds: " + toScreen.Bounds.format());
       Console.WriteLine($"Matching processes: ", String.Join(", ", procs.Select(p => p.ProcessName).ToArray()));
 
+      Action<string> verboseOut = (string s) =>
+      {
+        if (!verbose) return;
+        Console.WriteLine(s);
+      };
+
       int targX = toScreen.WorkingArea.Left,
           targY = toScreen.WorkingArea.Top;
 
@@ -161,38 +179,30 @@ namespace WinResize
         try
         {
           Console.WriteLine($"{proc.ProcessName} ({proc.Id})".PadRight(40));
-          if (procScreen.DeviceName == toScreen.DeviceName)
-          {
-            Console.WriteLine($"  Skipping - already in target screen");
-            continue;
-          }
-
-          // Console.WriteLine("  procScreen Bounds: " + procScreen.Bounds.format());
-          // Console.WriteLine("  procScreen WA    : " + procScreen.WorkingArea.format());
 
           RECT rt = new RECT();
           if (!GetWindowRect(handle, out rt))
           {
-            Console.WriteLine("  Unable to get window rect - skipping");
+            verboseOut("  Unable to get window rect - skipping");
             continue;
           }
           else
           {
-            Console.WriteLine("  Original rect: " + rt.toRectangle().format());
+            verboseOut("  Original rect: " + rt.toRectangle().format());
           }
 
-          var minimized = (rt.Left < 0 && rt.Top < 0);
+          var minimized = rt.IsMinimized;
           if (minimized)
           {
-            Console.WriteLine("  Window is minimized - restoring to measure...");
+            verboseOut("  Window is minimized - restoring to measure...");
             ShowWindow(handle, SW_RESTORE);
             if (!GetWindowRect(handle, out rt))
             {
-              Console.WriteLine("  Unable to read rect!");
+              verboseOut("  Unable to read rect!");
             }
             if (rt.IsMinimized)
             {
-              Console.WriteLine("  Still minimized - falling back to fullscreen on target");
+              verboseOut("  Still minimized - falling back to fullscreen on target");
               rt.Left = procScreen.Bounds.Left;
               rt.Top = procScreen.Bounds.Top;
               rt.Right = toScreen.WorkingArea.Width;
@@ -201,7 +211,7 @@ namespace WinResize
           }
 
           var winRect = System.Drawing.Rectangle.FromLTRB(rt.Left, rt.Top, rt.Right, rt.Bottom);
-          Console.WriteLine("  Window rect: " + winRect.format());
+          verboseOut("  Window rect: " + winRect.format());
 
           var toRect = new Rectangle(
             winRect.X - procScreen.Bounds.X + toScreen.Bounds.X,
@@ -209,7 +219,7 @@ namespace WinResize
             winRect.Width,
             winRect.Height);
 
-          Console.WriteLine("  Target rect: " + toRect.format());
+          verboseOut("  Target rect: " + toRect.format());
 
           MoveWindow(handle, toRect.X, toRect.Y, toRect.Width, toRect.Height, true);
           SetFocus(handle);
@@ -224,6 +234,5 @@ namespace WinResize
 
       return 0;
     }
-
   }
 }
