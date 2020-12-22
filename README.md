@@ -37,6 +37,7 @@ gather from 2 from 4 to p proc adobe,spotify,discord
 
 ## Building
 
+Built as a .NET core app targetting Windows (yeah I know it could be a legacy .NET app or just a 10 line C-file).
 I just hope the vscode launch/tasks are set up. Me and vscode never were good friends.
 
 ## Publishing
