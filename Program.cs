@@ -37,7 +37,6 @@ namespace WinResize
 
   class Program
   {
-    static int SW_SHOWNORMAL = 1;
     static int SW_RESTORE = 9;
 
     [DllImport("user32.dll")]
